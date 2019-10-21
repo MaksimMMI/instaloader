@@ -220,16 +220,25 @@ class InstaloaderContext:
                                                                                                resp_json['message']))
             else:
                 raise ConnectionException("Login error: \"{}\" status.".format(resp_json['status']))
-        if not resp_json['authenticated']:
-            if resp_json['user']:
-                # '{"authenticated": false, "user": true, "status": "ok"}'
-                raise BadCredentialsException('Login error: Wrong password.')
-            else:
-                # '{"authenticated": false, "user": false, "status": "ok"}'
-                # Raise InvalidArgumentException rather than BadCredentialException, because BadCredentialException
-                # triggers re-asking of password in Instaloader.interactive_login(), which makes no sense if the
-                # username is invalid.
-                raise InvalidArgumentException('Login error: User {} does not exist.'.format(user))
+        try:
+            if not resp_json['authenticated']:
+                if resp_json['user']:
+                    # '{"authenticated": false, "user": true, "status": "ok"}'
+                    raise BadCredentialsException('Login error: Wrong password.')
+                else:
+                    # '{"authenticated": false, "user": false, "status": "ok"}'
+                    # Raise InvalidArgumentException rather than BadCredentialException, because BadCredentialException
+                    # triggers re-asking of password in Instaloader.interactive_login(), which makes no sense if the
+                    # username is invalid.
+                    raise InvalidArgumentException('Login error: User {} does not exist.'.format(user))
+        except KeyError as err:
+            # TODO: Delete this after catching error
+            import os
+            import logging
+            json.dump(resp_json, fp=open('error.json', 'w'))
+            logger = logging.getLogger("Worker_"+str(os.getpid()))
+            logging.critical("That WEARD ERROR" + resp_json)
+            json.dump(resp_json, fp=open('error.json', 'w'))
         # '{"authenticated": true, "user": true, "userId": ..., "oneTapPrompt": false, "status": "ok"}'
         session.headers.update({'X-CSRFToken': login.cookies['csrftoken']})
         self._session = session
@@ -405,15 +414,15 @@ class InstaloaderContext:
             if _attempt == self.max_connection_attempts:
                 raise ConnectionException(error_string) from err
             self.error(error_string + " [retrying; skip with ^C]", repeat_at_end=False)
-            try:
-                if is_graphql_query and isinstance(err, TooManyRequestsException):
-                    self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
-                if is_iphone_query and isinstance(err, TooManyRequestsException):
-                    self._ratecontrol_graphql_query('iphone', untracked_queries=True)
-                return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
-            except KeyboardInterrupt:
-                self.error("[skipped by user]", repeat_at_end=False)
-                raise ConnectionException(error_string) from err
+            # try:
+            #     if is_graphql_query and isinstance(err, TooManyRequestsException):
+            #         self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
+            #     if is_iphone_query and isinstance(err, TooManyRequestsException):
+            #         self._ratecontrol_graphql_query('iphone', untracked_queries=True)
+            #     return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
+            # except KeyboardInterrupt:
+            self.error("[skipped by user]", repeat_at_end=False)
+            raise ConnectionException(error_string) from err
 
     def graphql_query(self, query_hash: str, variables: Dict[str, Any],
                       referer: Optional[str] = None, rhx_gis: Optional[str] = None) -> Dict[str, Any]:
