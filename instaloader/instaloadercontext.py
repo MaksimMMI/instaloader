@@ -220,25 +220,20 @@ class InstaloaderContext:
                                                                                                resp_json['message']))
             else:
                 raise ConnectionException("Login error: \"{}\" status.".format(resp_json['status']))
-        try:
-            if not resp_json['authenticated']:
-                if resp_json['user']:
-                    # '{"authenticated": false, "user": true, "status": "ok"}'
-                    raise BadCredentialsException('Login error: Wrong password.')
-                else:
-                    # '{"authenticated": false, "user": false, "status": "ok"}'
-                    # Raise InvalidArgumentException rather than BadCredentialException, because BadCredentialException
-                    # triggers re-asking of password in Instaloader.interactive_login(), which makes no sense if the
-                    # username is invalid.
-                    raise InvalidArgumentException('Login error: User {} does not exist.'.format(user))
-        except KeyError as err:
-            # TODO: Delete this after catching error
-            import os
-            import logging
-            json.dump(resp_json, fp=open('error.json', 'w'))
-            logger = logging.getLogger("Worker_"+str(os.getpid()))
-            logging.critical("That WEARD ERROR" + resp_json)
-            json.dump(resp_json, fp=open('error.json', 'w'))
+        ########################
+        if "errors" in resp_json:
+            raise GenericRequestError("Error occurs when activities suspicious for {}".format(user))
+        ########################
+        if not resp_json['authenticated']:
+            if resp_json['user']:
+                # '{"authenticated": false, "user": true, "status": "ok"}'
+                raise BadCredentialsException('Login error: Wrong password.')
+            else:
+                # '{"authenticated": false, "user": false, "status": "ok"}'
+                # Raise InvalidArgumentException rather than BadCredentialException, because BadCredentialException
+                # triggers re-asking of password in Instaloader.interactive_login(), which makes no sense if the
+                # username is invalid.
+                raise InvalidArgumentException('Login error: User {} does not exist.'.format(user))
         # '{"authenticated": true, "user": true, "userId": ..., "oneTapPrompt": false, "status": "ok"}'
         session.headers.update({'X-CSRFToken': login.cookies['csrftoken']})
         self._session = session

@@ -64,3 +64,7 @@ class PostChangedException(InstaloaderException):
 
 class TooManyRequestsException(ConnectionException):
     pass
+
+
+class GenericRequestError(InstaloaderException):
+    pass
