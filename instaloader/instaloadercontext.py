@@ -223,7 +223,7 @@ class InstaloaderContext:
                 raise ConnectionException("Login error: \"{}\" status.".format(resp_json['status']))
         ########################
         if "errors" in resp_json:
-            raise ConnectionException("Error occur for {}".format(user))
+            raise GenericRequestException("Error occur for {}".format(user))
         ########################
         if not resp_json['authenticated']:
             if resp_json['user']:
