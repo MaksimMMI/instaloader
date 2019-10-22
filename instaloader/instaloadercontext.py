@@ -181,6 +181,7 @@ class InstaloaderContext:
         :raises InvalidArgumentException: If the provided username does not exist.
         :raises BadCredentialsException: If the provided password is wrong.
         :raises ConnectionException: If connection to Instagram failed.
+        :raises GenericRequestError: If json returned "errors".
         :raises TwoFactorAuthRequiredException: First step of 2FA login done, now call
            :meth:`Instaloader.two_factor_login`."""
         import http.client
@@ -222,7 +223,7 @@ class InstaloaderContext:
                 raise ConnectionException("Login error: \"{}\" status.".format(resp_json['status']))
         ########################
         if "errors" in resp_json:
-            raise GenericRequestError("Error occurs when activities suspicious for {}".format(user))
+            raise ConnectionException("Error occur for {}".format(user))
         ########################
         if not resp_json['authenticated']:
             if resp_json['user']:
