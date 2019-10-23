@@ -163,9 +163,12 @@ class Instaloader:
                  post_metadata_txt_pattern: str = None,
                  storyitem_metadata_txt_pattern: str = None,
                  max_connection_attempts: int = 3,
-                 commit_mode: bool = False):
+                 commit_mode: bool = False,
+                 proxies=None):
 
-        self.context = InstaloaderContext(sleep, quiet, user_agent, max_connection_attempts)
+        if proxies is None:
+            proxies = {}
+        self.context = InstaloaderContext(sleep, quiet, user_agent, max_connection_attempts, proxies)
 
         # configuration parameters
         self.dirname_pattern = dirname_pattern or "{target}"

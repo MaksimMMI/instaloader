@@ -47,8 +47,13 @@ class InstaloaderContext:
     """
 
     def __init__(self, sleep: bool = True, quiet: bool = False, user_agent: Optional[str] = None,
-                 max_connection_attempts: int = 3):
+                 max_connection_attempts: int = 3, proxies=None):
+        """
 
+        :type proxies: dict
+        """
+        if proxies is None:
+            proxies = {}
         self.user_agent = user_agent if user_agent is not None else default_user_agent()
         self._session = self.get_anonymous_session()
         self.username = None
@@ -58,6 +63,7 @@ class InstaloaderContext:
         self._graphql_page_length = 50
         self._root_rhx_gis = None
         self.two_factor_auth_pending = None
+        self.proxies = proxies
 
         # error log, filled with error() and printed at the end of Instaloader.main()
         self.error_log = []                      # type: List[str]
@@ -198,7 +204,7 @@ class InstaloaderContext:
         # Not using self.get_json() here, because we need to access csrftoken cookie
         self.do_sleep()
         login = session.post('https://www.instagram.com/accounts/login/ajax/',
-                             data={'password': passwd, 'username': user}, allow_redirects=True)
+                             data={'password': passwd, 'username': user}, allow_redirects=True, proxies=self.proxies)
         try:
             resp_json = login.json()
         except json.decoder.JSONDecodeError:
@@ -355,7 +361,7 @@ class InstaloaderContext:
                 self._ratecontrol_graphql_query(params['query_hash'])
             if is_iphone_query:
                 self._ratecontrol_graphql_query('iphone')
-            resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False)
+            resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
             while resp.is_redirect:
                 redirect_url = resp.headers['location']
                 self.log('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
