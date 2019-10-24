@@ -52,8 +52,6 @@ class InstaloaderContext:
 
         :type proxies: dict
         """
-        if proxies is None:
-            proxies = {}
         self.user_agent = user_agent if user_agent is not None else default_user_agent()
         self._session = self.get_anonymous_session()
         self.username = None

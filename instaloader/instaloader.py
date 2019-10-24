@@ -166,8 +166,6 @@ class Instaloader:
                  commit_mode: bool = False,
                  proxies=None):
 
-        if proxies is None:
-            proxies = {}
         self.context = InstaloaderContext(sleep, quiet, user_agent, max_connection_attempts, proxies)
 
         # configuration parameters
