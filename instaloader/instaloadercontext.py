@@ -165,6 +165,19 @@ class InstaloaderContext:
         """Not meant to be used directly, use :meth:`Instaloader.save_session_to_file`."""
         pickle.dump(requests.utils.dict_from_cookiejar(self._session.cookies), sessionfile)
 
+    def get_session(self):
+        """Retuning session as a dict"""
+        return requests.utils.dict_from_cookiejar(self._session.cookies)
+
+    def load_session_from_dict(self, username: str, session_dict: dict):
+        """Loading session from dict format"""
+        session = requests.Session()
+        session.cookies = requests.utils.cookiejar_from_dict(session_dict)
+        session.headers.update(self._default_http_header())
+        session.headers.update({'X-CSRFToken': session.cookies.get_dict()['csrftoken']})
+        self._session = session
+        self.username = username
+
     def load_session_from_file(self, username, sessionfile):
         """Not meant to be used directly, use :meth:`Instaloader.load_session_from_file`."""
         session = requests.Session()

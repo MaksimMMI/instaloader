@@ -402,6 +402,17 @@ class Instaloader:
             self.context.save_session_to_file(sessionfile)
             self.context.log("Saved session to %s." % filename)
 
+    @_requires_login
+    def get_session(self):
+        """
+        Getting session info
+        :return: dict
+        """
+        return self.context.get_session()
+
+    def load_session_from_dict(self, username: str, session_dict: dict):
+        self.context.load_session_from_dict(username, session_dict)
+
     def load_session_from_file(self, username: str, filename: Optional[str] = None) -> None:
         """Internally stores :class:`requests.Session` object loaded from file.
 
