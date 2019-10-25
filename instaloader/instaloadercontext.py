@@ -238,6 +238,8 @@ class InstaloaderContext:
                                                                                                resp_json['message']))
             else:
                 raise ConnectionException("Login error: \"{}\" status.".format(resp_json['status']))
+        if "errors" in resp_json:  # IP ban returns this response
+            raise ConnectionException("Login error: \"{}\" status.".format(json.dumps(resp_json)))
         if not resp_json['authenticated']:
             if resp_json['user']:
                 # '{"authenticated": false, "user": true, "status": "ok"}'
