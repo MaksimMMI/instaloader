@@ -368,72 +368,72 @@ class InstaloaderContext:
         is_graphql_query = 'query_hash' in params and 'graphql/query' in path
         is_iphone_query = host == 'i.instagram.com'
         sess = session if session else self._session
-        try:
-            self.do_sleep()
-            if is_graphql_query:
-                self._ratecontrol_graphql_query(params['query_hash'])
-            if is_iphone_query:
-                self._ratecontrol_graphql_query('iphone')
-            resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
-            while resp.is_redirect:
-                redirect_url = resp.headers['location']
-                self.log('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
-                if redirect_url.startswith('https://www.instagram.com/accounts/login'):
-                    # alternate rate limit exceeded behavior
-                    raise TooManyRequestsException("429 Too Many Requests: redirected to login")
-                if redirect_url.startswith('https://{}/'.format(host)):
-                    resp = sess.get(redirect_url if redirect_url.endswith('/') else redirect_url + '/',
-                                    params=params, allow_redirects=False)
-                else:
-                    break
-            if resp.status_code == 400:
-                raise QueryReturnedBadRequestException("400 Bad Request")
-            if resp.status_code == 404:
-                raise QueryReturnedNotFoundException("404 Not Found")
-            if resp.status_code == 429:
-                raise TooManyRequestsException("429 Too Many Requests")
-            if resp.status_code != 200:
-                raise ConnectionException("HTTP error code {}.".format(resp.status_code))
-            is_html_query = not is_graphql_query and not "__a" in params and host == "www.instagram.com"
-            if is_html_query:
-                match = re.search(r'window\._sharedData = (.*);</script>', resp.text)
-                if match is None:
-                    raise ConnectionException("Could not find \"window._sharedData\" in html response.")
-                resp_json = json.loads(match.group(1))
-                entry_data = resp_json.get('entry_data')
-                post_or_profile_page = list(entry_data.values())[0] if entry_data is not None else None
-                if post_or_profile_page is None:
-                    raise ConnectionException("\"window._sharedData\" does not contain required keys.")
-                # If GraphQL data is missing in `window._sharedData`, search for it in `__additionalDataLoaded`.
-                if 'graphql' not in post_or_profile_page[0]:
-                    match = re.search(r'window\.__additionalDataLoaded\([^{]+{"graphql":({.*})}\);</script>',
-                                      resp.text)
-                    if match is not None:
-                        post_or_profile_page[0]['graphql'] = json.loads(match.group(1))
-                return resp_json
+        # try:
+        self.do_sleep()
+        if is_graphql_query:
+            self._ratecontrol_graphql_query(params['query_hash'])
+        if is_iphone_query:
+            self._ratecontrol_graphql_query('iphone')
+        resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
+        while resp.is_redirect:
+            redirect_url = resp.headers['location']
+            self.log('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
+            if redirect_url.startswith('https://www.instagram.com/accounts/login'):
+                # alternate rate limit exceeded behavior
+                raise TooManyRequestsException("429 Too Many Requests: redirected to login")
+            if redirect_url.startswith('https://{}/'.format(host)):
+                resp = sess.get(redirect_url if redirect_url.endswith('/') else redirect_url + '/',
+                                params=params, allow_redirects=False)
             else:
-                resp_json = resp.json()
-            if 'status' in resp_json and resp_json['status'] != "ok":
-                if 'message' in resp_json:
-                    raise ConnectionException("Returned \"{}\" status, message \"{}\".".format(resp_json['status'],
-                                                                                               resp_json['message']))
-                else:
-                    raise ConnectionException("Returned \"{}\" status.".format(resp_json['status']))
+                break
+        if resp.status_code == 400:
+            raise QueryReturnedBadRequestException("400 Bad Request")
+        if resp.status_code == 404:
+            raise QueryReturnedNotFoundException("404 Not Found")
+        if resp.status_code == 429:
+            raise TooManyRequestsException("429 Too Many Requests")
+        if resp.status_code != 200:
+            raise ConnectionException("HTTP error code {}.".format(resp.status_code))
+        is_html_query = not is_graphql_query and not "__a" in params and host == "www.instagram.com"
+        if is_html_query:
+            match = re.search(r'window\._sharedData = (.*);</script>', resp.text)
+            if match is None:
+                raise ConnectionException("Could not find \"window._sharedData\" in html response.")
+            resp_json = json.loads(match.group(1))
+            entry_data = resp_json.get('entry_data')
+            post_or_profile_page = list(entry_data.values())[0] if entry_data is not None else None
+            if post_or_profile_page is None:
+                raise ConnectionException("\"window._sharedData\" does not contain required keys.")
+            # If GraphQL data is missing in `window._sharedData`, search for it in `__additionalDataLoaded`.
+            if 'graphql' not in post_or_profile_page[0]:
+                match = re.search(r'window\.__additionalDataLoaded\([^{]+{"graphql":({.*})}\);</script>',
+                                  resp.text)
+                if match is not None:
+                    post_or_profile_page[0]['graphql'] = json.loads(match.group(1))
             return resp_json
-        except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
-            error_string = "JSON Query to {}: {}".format(path, err)
-            if _attempt == self.max_connection_attempts:
-                raise ConnectionException(error_string) from err
-            self.error(error_string + " [retrying; skip with ^C]", repeat_at_end=False)
-            # try:
-            #     if is_graphql_query and isinstance(err, TooManyRequestsException):
-            #         self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
-            #     if is_iphone_query and isinstance(err, TooManyRequestsException):
-            #         self._ratecontrol_graphql_query('iphone', untracked_queries=True)
-            #     return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
-            # except KeyboardInterrupt:
-            self.error("[skipped by user]", repeat_at_end=False)
-            raise ConnectionException(error_string) from err
+        else:
+            resp_json = resp.json()
+        if 'status' in resp_json and resp_json['status'] != "ok":
+            if 'message' in resp_json:
+                raise ConnectionException("Returned \"{}\" status, message \"{}\".".format(resp_json['status'],
+                                                                                           resp_json['message']))
+            else:
+                raise ConnectionException("Returned \"{}\" status.".format(resp_json['status']))
+        return resp_json
+        # except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
+        #     # error_string = "JSON Query to {}: {}".format(path, err)
+        #     if _attempt == self.max_connection_attempts:
+        #         raise ConnectionException() from err
+        #     # self.error(error_string + " [retrying; skip with ^C]", repeat_at_end=False)
+        #     # try:
+        #     #     if is_graphql_query and isinstance(err, TooManyRequestsException):
+        #     #         self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
+        #     #     if is_iphone_query and isinstance(err, TooManyRequestsException):
+        #     #         self._ratecontrol_graphql_query('iphone', untracked_queries=True)
+        #     #     return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
+        #     # except KeyboardInterrupt:
+        #     # self.error("[skipped by user]", repeat_at_end=False)
+        #     raise ConnectionException() from err
 
     def graphql_query(self, query_hash: str, variables: Dict[str, Any],
                       referer: Optional[str] = None, rhx_gis: Optional[str] = None) -> Dict[str, Any]:
