@@ -370,10 +370,11 @@ class InstaloaderContext:
         sess = session if session else self._session
         # try:
         self.do_sleep()
-        if is_graphql_query:
-            self._ratecontrol_graphql_query(params['query_hash'])
-        if is_iphone_query:
-            self._ratecontrol_graphql_query('iphone')
+        # TODO: not to stop at all, since we switch accounts
+        # if is_graphql_query:
+        #     self._ratecontrol_graphql_query(params['query_hash'])
+        # if is_iphone_query:
+        #     self._ratecontrol_graphql_query('iphone')
         resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
         while resp.is_redirect:
             redirect_url = resp.headers['location']
