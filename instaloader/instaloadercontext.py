@@ -422,10 +422,10 @@ class InstaloaderContext:
                     raise ConnectionException("Returned \"{}\" status.".format(resp_json['status']))
             return resp_json
         except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
-            # error_string = "JSON Query to {}: {}".format(path, err)
+            error_string = "JSON Query to {}: {}".format(path, err)
             if _attempt == self.max_connection_attempts:
                 raise ConnectionException() from err
-            # self.error(error_string + " [retrying; skip with ^C]", repeat_at_end=False)
+            self.error(error_string + " attempting again", repeat_at_end=False)
             # try:
             #     if is_graphql_query and isinstance(err, TooManyRequestsException):
             #         self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
