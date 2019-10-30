@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from . import __version__
 from .exceptions import *
 from .instaloadercontext import InstaloaderContext
+import urllib3
 
 
 PostSidecarNode = namedtuple('PostSidecarNode', ['is_video', 'display_url', 'video_url'])
@@ -679,7 +680,7 @@ class Profile:
         if self._context.is_logged_in:
             try:
                 return self._iphone_struct['hd_profile_pic_url_info']['url']
-            except (InstaloaderException, KeyError) as err:
+            except (urllib3.exceptions, InstaloaderException, KeyError) as err:
                 self._context.error('{} Unable to fetch high quality profile pic.'.format(err))
                 return self._metadata("profile_pic_url_hd")
         else:
