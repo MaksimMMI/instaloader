@@ -370,7 +370,6 @@ class InstaloaderContext:
         sess = session if session else self._session
         try:
             self.do_sleep()
-            # TODO: not to stop at all, since we switch accounts
             # if is_graphql_query:
             #     self._ratecontrol_graphql_query(params['query_hash'])
             # if is_iphone_query:
