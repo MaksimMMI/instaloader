@@ -11,7 +11,6 @@ from .exceptions import *
 from .instaloadercontext import InstaloaderContext
 import requests
 
-
 PostSidecarNode = namedtuple('PostSidecarNode', ['is_video', 'display_url', 'video_url'])
 PostSidecarNode.__doc__ = "Item of a Sidecar Post."
 PostSidecarNode.is_video.__doc__ = "Whether this node is a video."
@@ -25,10 +24,10 @@ PostCommentAnswer.text.__doc__ = "Comment text."
 PostCommentAnswer.owner.__doc__ = "Owner :class:`Profile` of the comment."
 PostCommentAnswer.likes_count.__doc__ = "Number of likes on comment."
 
-PostComment = namedtuple('PostComment', (*PostCommentAnswer._fields, 'answers')) # type: ignore
+PostComment = namedtuple('PostComment', (*PostCommentAnswer._fields, 'answers'))  # type: ignore
 for field in PostCommentAnswer._fields:
     getattr(PostComment, field).__doc__ = getattr(PostCommentAnswer, field).__doc__
-PostComment.answers.__doc__ = r"Iterator which yields all :class:`PostCommentAnswer`\ s for the comment." # type: ignore
+PostComment.answers.__doc__ = r"Iterator which yields all :class:`PostCommentAnswer`\ s for the comment."  # type: ignore
 
 PostLocation = namedtuple('PostLocation', ['id', 'name', 'slug', 'has_public_page', 'lat', 'lng'])
 PostLocation.id.__doc__ = "ID number of location."
@@ -70,8 +69,8 @@ class Post:
         self._node = node
         self._owner_profile = owner_profile
         self._full_metadata_dict = None  # type: Optional[Dict[str, Any]]
-        self._rhx_gis_str = None         # type: Optional[str]
-        self._location = None            # type: Optional[PostLocation]
+        self._rhx_gis_str = None  # type: Optional[str]
+        self._location = None  # type: Optional[PostLocation]
 
     @classmethod
     def from_shortcode(cls, context: InstaloaderContext, shortcode: str):
@@ -265,9 +264,11 @@ class Post:
         """Printable caption, useful as a format specifier for --filename-pattern.
 
         .. versionadded:: 4.2.6"""
+
         def _elliptify(caption):
             pcaption = ' '.join([s.replace('/', '\u2215') for s in caption.splitlines() if s]).strip()
             return (pcaption[:30] + u"\u2026") if len(pcaption) > 31 else pcaption
+
         return _elliptify(self.caption) if self.caption else ''
 
     @property
@@ -338,6 +339,7 @@ class Post:
         id (int), owner (:class:`Profile`) and answers (:class:`~typing.Iterator`\ [:class:`PostCommentAnswer`])
         if available.
         """
+
         def _postcommentanswer(node):
             return PostCommentAnswer(id=int(node['id']),
                                      created_at_utc=datetime.utcfromtimestamp(node['created_at']),
@@ -366,6 +368,7 @@ class Post:
         def _postcomment(node):
             return PostComment(*_postcommentanswer(node),
                                answers=_postcommentanswers(node))
+
         if self.comments == 0:
             # Avoid doing additional requests if there are no comments
             return
@@ -458,6 +461,7 @@ class Profile:
 
     Also, this class implements == and is hashable.
     """
+
     def __init__(self, context: InstaloaderContext, node: Dict[str, Any]):
         assert 'username' in node
         self._context = context
@@ -730,17 +734,22 @@ class Profile:
                                                     lambda d: d['data']['user']['edge_user_to_photos_of_you'],
                                                     self._rhx_gis))
 
-    def get_followers(self) -> Iterator['Profile']:
+    def get_followers(self, end_cursor: Optional[Dict[str, Any]] = None) -> Iterator['Profile']:
         """
         Retrieve list of followers of given profile.
         To use this, one needs to be logged in and private profiles has to be followed.
+        Also retrieves next page location for resuming abilities.
         """
         if not self._context.is_logged_in:
             raise LoginRequiredException("--login required to get a profile's followers.")
         self._obtain_metadata()
-        yield from (Profile(self._context, node) for node in
+        query_variables = {'id': str(self.userid)}
+        if end_cursor:
+            query_variables['after'] = end_cursor
+
+        yield from ((Profile(self._context, node), end_cursor) for (node, end_cursor) in
                     self._context.graphql_node_list("37479f2b8209594dde7facb0d904896a",
-                                                    {'id': str(self.userid)},
+                                                    query_variables,
                                                     'https://www.instagram.com/' + self.username + '/',
                                                     lambda d: d['data']['user']['edge_followed_by'],
                                                     self._rhx_gis))
@@ -900,7 +909,7 @@ class Story:
     def __init__(self, context: InstaloaderContext, node: Dict[str, Any]):
         self._context = context
         self._node = node
-        self._unique_id = None      # type: Optional[str]
+        self._unique_id = None  # type: Optional[str]
         self._owner_profile = None  # type: Optional[Profile]
 
     def __repr__(self):
