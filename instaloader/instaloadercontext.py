@@ -497,11 +497,11 @@ class InstaloaderContext:
             data = first_data
         else:
             data = _query()
-        yield from (edge['node'] for edge in data['edges'])
+        yield from ((edge['node'], data['page_info']['end_cursor']) for edge in data['edges'])
         while data['page_info']['has_next_page']:
             query_variables['after'] = data['page_info']['end_cursor']
             data = _query()
-            yield from (edge['node'] for edge in data['edges'])
+            yield from ((edge['node'], data['page_info']['end_cursor']) for edge in data['edges'])
 
     def get_iphone_json(self, path: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """JSON request to ``i.instagram.com``.
