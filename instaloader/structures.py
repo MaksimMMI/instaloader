@@ -359,7 +359,7 @@ class Post:
                 # If the answer's metadata already contains all comments, don't do GraphQL requests to obtain them
                 yield from (_postcommentanswer(comment['node']) for comment in answer_edges)
                 return
-            yield from (_postcommentanswer(answer_node) for answer_node in
+            yield from (_postcommentanswer(answer_node) for answer_node, end_cursor in
                         self._context.graphql_node_list("51fdd02b67508306ad4484ff574a0b62",
                                                         {'comment_id': node['id']},
                                                         'https://www.instagram.com/p/' + self.shortcode + '/',
@@ -385,7 +385,7 @@ class Post:
             # If the Post's metadata already contains all parent comments, don't do GraphQL requests to obtain them
             yield from (_postcomment(comment['node']) for comment in comment_edges)
             return
-        yield from (_postcomment(node) for node in
+        yield from (_postcomment(node) for node, end_cursor in
                     self._context.graphql_node_list(
                         "97b41c52301f77ce508f55e66d17620e" if threaded_comments_available
                         else "f0986789a5c5d17c2400faebf16efd0d",
@@ -406,7 +406,7 @@ class Post:
             # If the Post's metadata already contains all likes, don't do GraphQL requests to obtain them
             yield from (Profile(self._context, like['node']) for like in likes_edges)
             return
-        yield from (Profile(self._context, node) for node in
+        yield from (Profile(self._context, node) for node, end_cursor in
                     self._context.graphql_node_list("1cb6ec562846122743b61e492c85999f", {'shortcode': self.shortcode},
                                                     'https://www.instagram.com/p/' + self.shortcode + '/',
                                                     lambda d: d['data']['shortcode_media']['edge_liked_by'],
@@ -699,7 +699,7 @@ class Profile:
     def get_posts(self) -> Iterator[Post]:
         """Retrieve all posts from a profile."""
         self._obtain_metadata()
-        yield from (Post(self._context, node, self) for node in
+        yield from (Post(self._context, node, self) for node, end_cursor in
                     self._context.graphql_node_list("472f257a40c653c64c666ce877d59d2b",
                                                     {'id': self.userid},
                                                     'https://www.instagram.com/{0}/'.format(self.username),
@@ -714,7 +714,7 @@ class Profile:
             raise LoginRequiredException("--login={} required to get that profile's saved posts.".format(self.username))
 
         self._obtain_metadata()
-        yield from (Post(self._context, node) for node in
+        yield from (Post(self._context, node) for node, end_cursor in
                     self._context.graphql_node_list("f883d95537fbcd400f466f63d42bd8a1",
                                                     {'id': self.userid},
                                                     'https://www.instagram.com/{0}/'.format(self.username),
@@ -727,7 +727,7 @@ class Profile:
 
         .. versionadded:: 4.0.7"""
         self._obtain_metadata()
-        yield from (Post(self._context, node, self if int(node['owner']['id']) == self.userid else None) for node in
+        yield from (Post(self._context, node, self if int(node['owner']['id']) == self.userid else None) for node, end_cursor in
                     self._context.graphql_node_list("e31a871f7301132ceaab56507a66bbb7",
                                                     {'id': self.userid},
                                                     'https://www.instagram.com/{0}/'.format(self.username),
@@ -747,7 +747,7 @@ class Profile:
         if end_cursor:
             query_variables['after'] = end_cursor
 
-        yield from ((Profile(self._context, node), end_cursor) for (node, end_cursor) in
+        yield from ((Profile(self._context, node), end_cursor) for node, end_cursor in
                     self._context.graphql_node_list("37479f2b8209594dde7facb0d904896a",
                                                     query_variables,
                                                     'https://www.instagram.com/' + self.username + '/',
@@ -762,7 +762,7 @@ class Profile:
         if not self._context.is_logged_in:
             raise LoginRequiredException("--login required to get a profile's followees.")
         self._obtain_metadata()
-        yield from (Profile(self._context, node) for node in
+        yield from ((Profile(self._context, node), end_cursor) for node, end_cursor in
                     self._context.graphql_node_list("58712303d941c6855d4e888c5f0cd22f",
                                                     {'id': str(self.userid)},
                                                     'https://www.instagram.com/' + self.username + '/',
