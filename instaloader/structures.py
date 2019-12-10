@@ -696,12 +696,15 @@ class Profile:
 	   Use :attr:`profile_pic_url`."""
         return self.profile_pic_url
 
-    def get_posts(self) -> Iterator[Post]:
+    def get_posts(self, end_cursor: Optional[Dict[str, Any]] = None) -> Iterator[Post]:
         """Retrieve all posts from a profile."""
         self._obtain_metadata()
+        query_variables = {'id': str(self.userid)}
+        if end_cursor:
+            query_variables['after'] = end_cursor
         yield from ((Post(self._context, node, self), end_cursor) for node, end_cursor in
                     self._context.graphql_node_list("472f257a40c653c64c666ce877d59d2b",
-                                                    {'id': self.userid},
+                                                    query_variables,
                                                     'https://www.instagram.com/{0}/'.format(self.username),
                                                     lambda d: d['data']['user']['edge_owner_to_timeline_media'],
                                                     self._rhx_gis,
