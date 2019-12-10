@@ -699,7 +699,7 @@ class Profile:
     def get_posts(self) -> Iterator[Post]:
         """Retrieve all posts from a profile."""
         self._obtain_metadata()
-        yield from (Post(self._context, node, self), end_cursor for node, end_cursor in
+        yield from ((Post(self._context, node, self), end_cursor) for node, end_cursor in
                     self._context.graphql_node_list("472f257a40c653c64c666ce877d59d2b",
                                                     {'id': self.userid},
                                                     'https://www.instagram.com/{0}/'.format(self.username),
