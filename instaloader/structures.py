@@ -332,7 +332,7 @@ class Post:
         except KeyError:
             return self._field('edge_media_to_comment', 'count')
 
-    def get_comments(self) -> Iterator[PostComment]:
+    def get_comments(self, end_cursor: Optional[Dict[str, Any]] = None) -> Iterator[PostComment]:
         r"""Iterate over all comments of the post.
 
         Each comment is represented by a PostComment namedtuple with fields text (string), created_at (datetime),
@@ -385,11 +385,14 @@ class Post:
             # If the Post's metadata already contains all parent comments, don't do GraphQL requests to obtain them
             yield from (_postcomment(comment['node']) for comment in comment_edges)
             return
-        yield from (_postcomment(node) for node, end_cursor in
+        query_variables = {'shortcode': self.shortcode}
+        if end_cursor:
+            query_variables['after'] = end_cursor
+        yield from ((_postcomment(node), end_cursor) for node, end_cursor in
                     self._context.graphql_node_list(
                         "97b41c52301f77ce508f55e66d17620e" if threaded_comments_available
                         else "f0986789a5c5d17c2400faebf16efd0d",
-                        {'shortcode': self.shortcode},
+                        query_variables,
                         'https://www.instagram.com/p/' + self.shortcode + '/',
                         lambda d:
                         d['data']['shortcode_media'][
