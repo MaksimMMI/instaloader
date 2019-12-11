@@ -383,7 +383,7 @@ class Post:
 
         if self.comments == len(comment_edges) + answers_count:
             # If the Post's metadata already contains all parent comments, don't do GraphQL requests to obtain them
-            yield from (_postcomment(comment['node']) for comment in comment_edges)
+            yield from ((_postcomment(comment['node']), None) for comment in comment_edges)
             return
         query_variables = {'shortcode': self.shortcode}
         if end_cursor:
