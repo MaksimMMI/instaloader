@@ -370,10 +370,10 @@ class InstaloaderContext:
         sess = session if session else self._session
         try:
             self.do_sleep()
-            # if is_graphql_query:
-            #     self._ratecontrol_graphql_query(params['query_hash'])
-            # if is_iphone_query:
-            #     self._ratecontrol_graphql_query('iphone')
+            if self.sleep and is_graphql_query:
+                self._ratecontrol_graphql_query(params['query_hash'])
+            if self.sleep and is_iphone_query:
+                self._ratecontrol_graphql_query('iphone')
             resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
             while resp.is_redirect:
                 redirect_url = resp.headers['location']
@@ -426,10 +426,10 @@ class InstaloaderContext:
                 raise ConnectionException() from err
             self.error(error_string + " attempting again", repeat_at_end=False)
             # try:
-            #     if is_graphql_query and isinstance(err, TooManyRequestsException):
-            #         self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
-            #     if is_iphone_query and isinstance(err, TooManyRequestsException):
-            #         self._ratecontrol_graphql_query('iphone', untracked_queries=True)
+            if self.sleep and is_graphql_query and isinstance(err, TooManyRequestsException):
+                self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
+            if self.sleep and is_iphone_query and isinstance(err, TooManyRequestsException):
+                self._ratecontrol_graphql_query('iphone', untracked_queries=True)
             return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
             # except KeyboardInterrupt:
             # self.error("[skipped by user]", repeat_at_end=False)
