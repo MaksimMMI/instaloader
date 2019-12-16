@@ -410,8 +410,8 @@ class Instaloader:
         """
         return self.context.get_session()
 
-    def load_session_from_dict(self, username: str, session_dict: dict):
-        self.context.load_session_from_dict(username, session_dict)
+    def load_session_from_dict(self, username: str, session_dict: dict, rate_control: Optional[dict] = None):
+        self.context.load_session_from_dict(username, session_dict, rate_control)
 
     def load_session_from_file(self, username: str, filename: Optional[str] = None) -> None:
         """Internally stores :class:`requests.Session` object loaded from file.

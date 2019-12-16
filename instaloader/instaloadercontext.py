@@ -169,7 +169,7 @@ class InstaloaderContext:
         """Retuning session as a dict"""
         return requests.utils.dict_from_cookiejar(self._session.cookies)
 
-    def load_session_from_dict(self, username: str, session_dict: dict):
+    def load_session_from_dict(self, username: str, session_dict: dict, rate_control: Optional[dict] = None):
         """Loading session from dict format"""
         session = requests.Session()
         session.cookies = requests.utils.cookiejar_from_dict(session_dict)
@@ -177,6 +177,10 @@ class InstaloaderContext:
         session.headers.update({'X-CSRFToken': session.cookies.get_dict()['csrftoken']})
         self._session = session
         self.username = username
+        # For the adaption of sleep intervals (rate control)
+        if rate_control:
+            self._graphql_query_timestamps = rate_control['_graphql_query_timestamps']  # type: Dict[str, List[float]]
+            self._graphql_earliest_next_request_time = rate_control['_graphql_earliest_next_request_time'] # type: float
 
     def load_session_from_file(self, username, sessionfile):
         """Not meant to be used directly, use :meth:`Instaloader.load_session_from_file`."""
