@@ -424,7 +424,7 @@ class InstaloaderContext:
                 else:
                     raise ConnectionException("Returned \"{}\" status.".format(resp_json['status']))
             return resp_json
-        except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
+        except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException, TooManyRequestsException) as err:
             error_string = "JSON Query to {}: {}".format(path, err)
             if _attempt == self.max_connection_attempts:
                 raise ConnectionException() from err
