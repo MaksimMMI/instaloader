@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from hashlib import md5
 from io import BytesIO
+import logging
 from pathlib import Path
 from typing import Any, Callable, Iterator, List, Optional, Set, Union
 
@@ -150,6 +151,7 @@ class Instaloader:
 
     def __init__(self,
                  sleep: bool = True, quiet: bool = False,
+                 control_429: bool = True,
                  user_agent: Optional[str] = None,
                  dirname_pattern: Optional[str] = None,
                  filename_pattern: Optional[str] = None,
@@ -166,7 +168,7 @@ class Instaloader:
                  commit_mode: bool = False,
                  proxies=None):
 
-        self.context = InstaloaderContext(sleep, quiet, user_agent, max_connection_attempts, proxies)
+        self.context = InstaloaderContext(sleep, control_429, quiet, user_agent, max_connection_attempts, proxies)
 
         # configuration parameters
         self.dirname_pattern = dirname_pattern or "{target}"

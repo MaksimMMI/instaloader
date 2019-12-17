@@ -8,6 +8,7 @@ import sys
 import textwrap
 import time
 import urllib.parse
+from LoggingMMI import LoggingMMI
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Iterator, List, Optional, Union
@@ -46,8 +47,8 @@ class InstaloaderContext:
     class :class:`Instaloader`.
     """
 
-    def __init__(self, sleep: bool = True, quiet: bool = False, user_agent: Optional[str] = None,
-                 max_connection_attempts: int = 3, proxies=None):
+    def __init__(self, sleep: bool = True, control_429: bool = True, quiet: bool = False,
+                 user_agent: Optional[str] = None, max_connection_attempts: int = 3, proxies=None):
         """
 
         :type proxies: dict
@@ -56,6 +57,7 @@ class InstaloaderContext:
         self._session = self.get_anonymous_session()
         self.username = None
         self.sleep = sleep
+        self.control_429 = control_429
         self.quiet = quiet
         self.max_connection_attempts = max_connection_attempts
         self._graphql_page_length = 50
@@ -97,23 +99,23 @@ class InstaloaderContext:
     def log(self, *msg, sep='', end='\n', flush=False):
         """Log a message to stdout that can be suppressed with --quiet."""
         if not self.quiet:
-            print(*msg, sep=sep, end=end, flush=flush)
+            LoggingMMI.info(*msg)
 
     def error(self, msg, repeat_at_end=True):
         """Log a non-fatal error message to stderr, which is repeated at program termination.
 
         :param msg: Message to be printed.
         :param repeat_at_end: Set to false if the message should be printed, but not repeated at program termination."""
-        print(msg, file=sys.stderr)
+        LoggingMMI.error(msg)
         if repeat_at_end:
             self.error_log.append(msg)
 
     def close(self):
         """Print error log and close session"""
-        if self.error_log and not self.quiet:
-            print("\nErrors occured:", file=sys.stderr)
-            for err in self.error_log:
-                print(err, file=sys.stderr)
+        # if self.error_log and not self.quiet:
+        #     print("\nErrors occured:", file=sys.stderr)
+        #     for err in self.error_log:
+        #         print(err, file=sys.stderr)
         self._session.close()
 
     @contextmanager
@@ -335,7 +337,7 @@ class InstaloaderContext:
             waittime = self._graphql_query_waittime(query_hash, time.monotonic(), untracked_queries)
             assert waittime >= 0
             if waittime > 10:
-                self.log('\nToo many queries in the last time. Need to wait {} seconds, until {:%H:%M}.'
+                LoggingMMI.warning('Too many queries in the last time. Need to wait {} seconds, until {:%H:%M}.'
                          .format(waittime, datetime.now() + timedelta(seconds=waittime)))
             time.sleep(waittime)
             if query_hash not in self._graphql_query_timestamps:
@@ -346,7 +348,8 @@ class InstaloaderContext:
             text_for_429 = ("HTTP error code 429 was returned because too many queries occured in the last time. "
                             "Please do not use Instagram in your browser or run multiple instances of Instaloader "
                             "in parallel.")
-            print(textwrap.fill(text_for_429), file=sys.stderr)
+            LoggingMMI.warning(textwrap.fill(text_for_429))
+            # print(textwrap.fill(text_for_429), file=sys.stderr)
             current_time = time.monotonic()
             waittime = self._graphql_query_waittime(query_hash, current_time, untracked_queries)
             assert waittime >= 0
@@ -373,15 +376,15 @@ class InstaloaderContext:
         is_iphone_query = host == 'i.instagram.com'
         sess = session if session else self._session
         try:
-            # self.do_sleep()
-            if self.sleep and is_graphql_query:
+            self.do_sleep()
+            if self.control_429 and is_graphql_query:
                 self._ratecontrol_graphql_query(params['query_hash'])
-            if self.sleep and is_iphone_query:
+            if self.control_429 and is_iphone_query:
                 self._ratecontrol_graphql_query('iphone')
             resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
             while resp.is_redirect:
                 redirect_url = resp.headers['location']
-                self.log('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
+                LoggingMMI.info('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
                 if redirect_url.startswith('https://www.instagram.com/accounts/login'):
                     # alternate rate limit exceeded behavior
                     raise TooManyRequestsException("429 Too Many Requests: redirected to login")
@@ -430,9 +433,9 @@ class InstaloaderContext:
                 raise ConnectionException() from err
             self.error(error_string + " attempting again", repeat_at_end=False)
             # try:
-            if self.sleep and is_graphql_query and isinstance(err, TooManyRequestsException):
+            if self.control_429 and is_graphql_query and isinstance(err, TooManyRequestsException):
                 self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
-            if self.sleep and is_iphone_query and isinstance(err, TooManyRequestsException):
+            if self.control_429 and is_iphone_query and isinstance(err, TooManyRequestsException):
                 self._ratecontrol_graphql_query('iphone', untracked_queries=True)
             return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
             # except KeyboardInterrupt:
