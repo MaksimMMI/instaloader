@@ -427,20 +427,27 @@ class InstaloaderContext:
                 else:
                     raise ConnectionException("Returned \"{}\" status.".format(resp_json['status']))
             return resp_json
-        except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException, TooManyRequestsException) as err:
+        except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
             error_string = "JSON Query to {}: {}".format(path, err)
             if _attempt == self.max_connection_attempts:
                 raise ConnectionException() from err
             self.error(error_string + " attempting again", repeat_at_end=False)
             # try:
+            # if self.control_429 and is_graphql_query and isinstance(err, TooManyRequestsException):
+            #     self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
+            # if self.control_429 and is_iphone_query and isinstance(err, TooManyRequestsException):
+            #     self._ratecontrol_graphql_query('iphone', untracked_queries=True)
+            return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
+            # except KeyboardInterrupt:
+            # self.error("[skipped by user]", repeat_at_end=False)
+            # raise ConnectionException() from err
+        except TooManyRequestsException as err:
             if self.control_429 and is_graphql_query and isinstance(err, TooManyRequestsException):
                 self._ratecontrol_graphql_query(params['query_hash'], untracked_queries=True)
             if self.control_429 and is_iphone_query and isinstance(err, TooManyRequestsException):
                 self._ratecontrol_graphql_query('iphone', untracked_queries=True)
             return self.get_json(path=path, params=params, host=host, session=sess, _attempt=_attempt + 1)
-            # except KeyboardInterrupt:
-            # self.error("[skipped by user]", repeat_at_end=False)
-            # raise ConnectionException() from err
+
 
     def graphql_query(self, query_hash: str, variables: Dict[str, Any],
                       referer: Optional[str] = None, rhx_gis: Optional[str] = None) -> Dict[str, Any]:
