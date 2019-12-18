@@ -295,12 +295,12 @@ class InstaloaderContext:
     def _dump_query_timestamps(self, current_time: float):
         """Output the number of GraphQL queries grouped by their query_hash within the last time."""
         windows = [10, 11, 15, 20, 30, 60]
-        print("GraphQL requests:", file=sys.stderr)
+        LoggingMMI.info("GraphQL requests:")
         for query_hash, times in self._graphql_query_timestamps.items():
-            print("  {}".format(query_hash), file=sys.stderr)
+            LoggingMMI.info("  {}".format(query_hash))
             for window in windows:
                 reqs_in_sliding_window = sum(t > current_time - window * 60 for t in times)
-                print("    last {} minutes: {} requests".format(window, reqs_in_sliding_window), file=sys.stderr)
+                LoggingMMI.info("    last {} minutes: {} requests".format(window, reqs_in_sliding_window))
 
     def _graphql_request_count_per_sliding_window(self, query_hash: str) -> int:
         """Return how many GraphQL requests can be done within the sliding window."""
@@ -310,9 +310,12 @@ class InstaloaderContext:
             max_reqs = {'1cb6ec562846122743b61e492c85999f': 200, '33ba35852cb50da46f5b5e889df7d159': 200}
         return max_reqs.get(query_hash) or min(max_reqs.values())
 
-    def _graphql_query_waittime(self, query_hash: str, current_time: float, untracked_queries: bool = False) -> float:
+    def _graphql_query_waittime(self, query_hash: [str, None], current_time: float, untracked_queries: bool = False) -> float:
         """Calculate time needed to wait before GraphQL query can be executed."""
         sliding_window = 660
+        if not query_hash:
+            # todo not having query_hash
+            pass
         if query_hash not in self._graphql_query_timestamps:
             self._graphql_query_timestamps[query_hash] = []
         self._graphql_query_timestamps[query_hash] = list(filter(lambda t: t > current_time - 60 * 60,
@@ -327,7 +330,7 @@ class InstaloaderContext:
             self._graphql_earliest_next_request_time = next_request_time
         return round(max(next_request_time, self._graphql_earliest_next_request_time) - current_time)
 
-    def _ratecontrol_graphql_query(self, query_hash: str, untracked_queries: bool = False):
+    def _ratecontrol_graphql_query(self, query_hash: [str, None], untracked_queries: bool = False):
         """Called before a GraphQL query is made in order to stay within Instagram's rate limits.
 
         :param query_hash: The query_hash parameter of the query.
@@ -429,8 +432,10 @@ class InstaloaderContext:
             return resp_json
         except (ConnectionException, json.decoder.JSONDecodeError, requests.exceptions.RequestException) as err:
             error_string = "JSON Query to {}: {}".format(path, err)
-            if _attempt == self.max_connection_attempts:
+            if _attempt == self.max_connection_attempts or isinstance(err, TooManyRequestsException):
                 if isinstance(err, TooManyRequestsException):
+                    # todo
+                    # self._ratecontrol_graphql_query(None, untracked_queries=True)
                     raise TooManyRequestsException("429 for non graphql query.")
                 else:
                     raise ConnectionException() from err
@@ -444,7 +449,6 @@ class InstaloaderContext:
             # except KeyboardInterrupt:
             # self.error("[skipped by user]", repeat_at_end=False)
             # raise ConnectionException() from err
-
 
     def graphql_query(self, query_hash: str, variables: Dict[str, Any],
                       referer: Optional[str] = None, rhx_gis: Optional[str] = None) -> Dict[str, Any]:
