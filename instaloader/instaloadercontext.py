@@ -387,7 +387,7 @@ class InstaloaderContext:
             resp = sess.get('https://{0}/{1}'.format(host, path), params=params, allow_redirects=False, proxies=self.proxies)
             while resp.is_redirect:
                 redirect_url = resp.headers['location']
-                LoggingMMI.info('\nHTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
+                LoggingMMI.info('HTTP redirect from https://{0}/{1} to {2}'.format(host, path, redirect_url))
                 if redirect_url.startswith('https://www.instagram.com/accounts/login'):
                     # alternate rate limit exceeded behavior
                     raise TooManyRequestsException("429 Too Many Requests: redirected to login")
